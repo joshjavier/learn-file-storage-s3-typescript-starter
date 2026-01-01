@@ -4,11 +4,7 @@ import { getVideo, updateVideo } from "../db/videos";
 import type { ApiConfig } from "../config";
 import type { BunRequest } from "bun";
 import { BadRequestError, NotFoundError, UserForbiddenError } from "./errors";
-
-type Thumbnail = {
-  data: ArrayBuffer;
-  mediaType: string;
-};
+import path from "path";
 
 const MAX_UPLOAD_SIZE = 10 << 20;
 
@@ -40,15 +36,16 @@ export async function handlerUploadThumbnail(cfg: ApiConfig, req: BunRequest) {
     throw new BadRequestError("File too large, max upload size is 10MB");
   }
 
-  const thumbnail: Thumbnail = {
-    data: await file.arrayBuffer(),
-    mediaType: file.type,
-  };
+  if (!file.type.startsWith("image/")) {
+    throw new BadRequestError("File is not an image");
+  }
+  const fileExtension = file.type.match(/^image\/([a-z]+)$/)![1];
 
-  const buf = Buffer.from(thumbnail.data);
-  const decoded = buf.toString("base64");
-  const dataURL = `data:${thumbnail.mediaType};base64,${decoded}`;
-  video.thumbnailURL = dataURL;
+  const destination = path.join(cfg.assetsRoot, `${video.id}.${fileExtension}`);
+  const data = await file.arrayBuffer();
+  await Bun.write(destination, data);
+
+  video.thumbnailURL = `http://localhost:${cfg.port}/${destination}`;
   updateVideo(cfg.db, video);
 
   return respondWithJSON(200, video);
