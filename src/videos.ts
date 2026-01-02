@@ -1,3 +1,5 @@
+import path from "path";
+
 export async function getVideoAspectRatio(
   filePath: string,
 ): Promise<"landscape" | "portrait" | "other"> {
@@ -94,4 +96,34 @@ function getAspectRatio(val: number, lim: number): [number, number] {
       upper = mediant;
     }
   }
+}
+
+export async function processVideoForFastStart(inputFilePath: string) {
+  const input = path.parse(inputFilePath);
+  const outputFilePath = path.join(
+    input.dir,
+    `${input.name}.processed${input.ext}`,
+  );
+
+  const proc = Bun.spawn([
+    "ffmpeg",
+    "-i",
+    inputFilePath,
+    "-movflags",
+    "faststart",
+    "-map_metadata",
+    "0",
+    "-codec",
+    "copy",
+    "-f",
+    "mp4",
+    outputFilePath,
+  ]);
+
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    throw new Error("Error processing video for fast start");
+  }
+
+  return outputFilePath;
 }
