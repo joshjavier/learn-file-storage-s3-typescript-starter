@@ -129,22 +129,3 @@ export async function processVideoForFastStart(inputFilePath: string) {
 
   return outputFilePath;
 }
-
-export function generatePresignedURL(
-  cfg: ApiConfig,
-  key: string,
-  expireTime: number,
-) {
-  return cfg.s3Client.presign(key, { expiresIn: expireTime });
-}
-
-export function dbVideoToSignedVideo(cfg: ApiConfig, video: Video) {
-  if (!video.videoURL) {
-    // this is a draft, so return the video as is
-    return video;
-  }
-
-  const presignedURL = generatePresignedURL(cfg, video.videoURL, 3600);
-  video.videoURL = presignedURL;
-  return video;
-}

@@ -5,11 +5,7 @@ import { BadRequestError, NotFoundError, UserForbiddenError } from "./errors";
 import { getBearerToken, validateJWT } from "../auth";
 import { getVideo, updateVideo } from "../db/videos";
 import { randomBytes } from "crypto";
-import {
-  dbVideoToSignedVideo,
-  getVideoAspectRatio,
-  processVideoForFastStart,
-} from "../videos";
+import { getVideoAspectRatio, processVideoForFastStart } from "../videos";
 
 const MAX_UPLOAD_SIZE = 1 << 30; // 1 GB
 
@@ -52,12 +48,12 @@ export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
   const s3file = cfg.s3Client.file(key);
   await s3file.write(processed, { type: file.type });
 
-  video.videoURL = key;
+  video.videoURL = `https://${cfg.s3CfDistribution}/${key}`;
   updateVideo(cfg.db, video);
 
   // cleanup
   await temp.delete();
   await processed.delete();
 
-  return respondWithJSON(200, dbVideoToSignedVideo(cfg, video));
+  return respondWithJSON(200, video);
 }
